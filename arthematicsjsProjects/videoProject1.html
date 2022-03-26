@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!--arthematics.ext.js-->
+    <script src="./support/arthematics/arthematics.ext.math.js"></script>
+    <script src="./support/arthematics/arthematics.ext.color.js"></script>
+    <script src="./support/arthematics/arthematics.ext.map.js"></script>
+    <script src="./support/arthematics/arthemaitcs.ext.shape.js"></script>
+    <script src="./support/arthematics/arthematics.ext.physics.js"></script>
+    <script src="./support/arthematics/arthematics.ext.camera.js"></script>
+    <!--arthematics.oext.js-->
+    <script src="./support/arthematics/arthematics.oext.gifrender.js"></script>
+    <!--arthematics.js-->
+    <script src="./support/arthematics/arthematics.core.js"></script>
+    <!--new.ext.js-->
+    <script src="./support/arthematics/arthematics.ext.dom.js"></script>
+    <!--tracker-->
+    <script src="./support/tracker/tracking-min.js"></script>
+    <script src="./support/tracker/face-min.js"></script>
+
+    <title>Document</title>
+    <style>
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .displayArea {
+            padding: 0;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+    <script>
+        window.onload = function () {
+            var displayArea = document.querySelector(".displayArea");
+            var cPointArr = [];
+            var gridSize = 15;
+            var tracker;//人脸识别
+            var trackerStateList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];//连续三张图识别或无法识别出人脸开始操作
+            var isBacking = false;//是否在聚拢
+            class Block1 extends BasicMover {
+                constructor(x, y, color) {
+                    super(1, new Vector(x, y), new Vector(0, 0));
+                    this.oposition = new Vector(x, y);
+                    this.color = color;
+                    this.maxForce = 0.18;
+                    this.maxSpeed = 8;
+                    this.t = 0;
+                }
+                seek(target) {
+                    //计算寻找目标的转向力，根据距离圆确定速度
+                    let desired = vector_sub(target, this.position);
+                    var d = desired.mag();
+                    desired.normalize();
+                    if (d < 200) {
+                        var m = map(d, 0, 200, 0, this.maxSpeed);
+                        desired.mult(m);
+                    } else {
+                        desired.mult(this.maxSpeed);
+                    }
+                    let steer = vector_sub(desired, this.velocity);
+                    steer.limit(this.maxForce);
+                    this.applyForce(steer);
+                }
+                applyBackForce() {
+                    this.seek(this.oposition);
+                }
+            }
+            //寻找最相近的颜色点
+            function findClosestColor(r, g, b) {
+                let cgridCount = 12;
+                let cgridSize = 255 / cgridCount;
+                let rc;
+                let gc;
+                let bc;
+                let rLeftPadding = r % cgridSize;
+                if (rLeftPadding <= cgridSize / 2) {
+                    rc = floor(r / cgridSize) * cgridSize;
+                } else {
+                    rc = floor(r / cgridSize) * cgridSize + cgridSize;
+                }
+                let gLeftPadding = g % cgridSize;
+                if (gLeftPadding <= cgridSize / 2) {
+                    gc = floor(g / cgridSize) * cgridSize;
+                } else {
+                    gc = floor(g / cgridSize) * cgridSize + cgridSize;
+                }
+                let bLeftPadding = b % cgridSize;
+                if (bLeftPadding <= cgridSize / 2) {
+                    bc = floor(b / cgridSize) * cgridSize;
+                } else {
+                    bc = floor(b / cgridSize) * cgridSize + cgridSize;
+                }
+                return new RGBColor(rc, gc, bc);
+            }
+
+            start(displayArea, () => {
+                background(rgb(0, 0, 0));
+                openMedia(width / 5, height / 5);
+                noStroke();
+
+                tracker = new tracking.ObjectTracker("face");
+                tracker.setInitialScale(4);
+                tracker.setStepSize(2);
+                tracker.setEdgesDensity(0.1);
+
+                tracking.track('#cvideo', tracker);
+
+                tracker.on('track', function (event) {
+                    trackerStateList.unshift(event.data.length);
+                    trackerStateList.pop();
+                });
+
+            });
+            loop(() => {
+                if (frameCount == 100) {
+                    background(rgb(0, 0, 0));
+                    cPointArr = [];
+                    drawMedia(0, 0, width, height);
+                    for (let x = 0; x < width; x += gridSize) {
+                        for (let y = 0; y < height; y += gridSize) {
+                            let colorData = getPointData(width - x, y);
+                            let blockData = new Block1(x, y, findClosestColor(colorData.r, colorData.g, colorData.b));
+                            cPointArr.push(blockData);
+                        }
+                    }
+                } else if (frameCount > 100) {
+                    drawMedia(0, 0, width, height);
+                    let i = -1;
+                    for (let x = 0; x < width; x += gridSize) {
+                        for (let y = 0; y < height; y += gridSize) {
+                            i++;
+                            let colorData = getPointData(width - x, y);
+                            cPointArr[i].color = findClosestColor(colorData.r, colorData.g, colorData.b);
+                        }
+                    }
+                }
+                background(rgb(0, 0, 0));
+                //累加人脸识别结果
+                let cdataLen = 0;
+                for (let cdata of trackerStateList) {
+                    cdataLen += cdata;
+                }
+                console.log(frameCount, cdataLen);
+                //连续多张图识别出人脸，开始返回
+                if (cdataLen >= trackerStateList.length / 25) {
+                    isBacking = true;
+                } else {
+                    isBacking = false;
+                }
+                for (let bk of cPointArr) {
+                    if (isBacking) {
+                        bk.applyBackForce();
+                    } else {
+                        bk.applyForce(new Vector(random(-0.2, 0.2), random(-0.2, 0.2)));
+                    }
+                    bk.checkEdges();
+                    bk.update();
+                    //bk.applyAirDrag(0.2);
+                    bk.display((_) => {
+                        fill(_.color);
+                        rectCenter(
+                            _.position.x, _.position.y,
+                            map(_.velocity.mag(), 0, _.maxSpeed, gridSize, gridSize * 1.5),
+                            map(_.velocity.mag(), 0, _.maxSpeed, gridSize, gridSize * 1.5),
+                        );
+                    });
+                }
+            })
+        }
+    </script>
+</head>
+
+<body>
+    <div class="displayArea">
+
+    </div>
+</body>
+
+</html>
