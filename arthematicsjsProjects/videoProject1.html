@@ -44,7 +44,7 @@
         window.onload = function () {
             var displayArea = document.querySelector(".displayArea");
             var cPointArr = [];
-            var gridSize = 15;
+            var gridSize = 5;
             var tracker;//人脸识别
             var trackerStateList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];//连续三张图识别或无法识别出人脸开始操作
             var isBacking = false;//是否在聚拢
@@ -53,8 +53,8 @@
                     super(1, new Vector(x, y), new Vector(0, 0));
                     this.oposition = new Vector(x, y);
                     this.color = color;
-                    this.maxForce = 0.18;
-                    this.maxSpeed = 8;
+                    this.maxForce = 0.28;
+                    this.maxSpeed = 16;
                     this.t = 0;
                 }
                 seek(target) {
@@ -76,37 +76,37 @@
                     this.seek(this.oposition);
                 }
             }
-            //寻找最相近的颜色点
-            function findClosestColor(r, g, b) {
-                let cgridCount = 12;
-                let cgridSize = 255 / cgridCount;
-                let rc;
-                let gc;
-                let bc;
-                let rLeftPadding = r % cgridSize;
-                if (rLeftPadding <= cgridSize / 2) {
-                    rc = floor(r / cgridSize) * cgridSize;
-                } else {
-                    rc = floor(r / cgridSize) * cgridSize + cgridSize;
-                }
-                let gLeftPadding = g % cgridSize;
-                if (gLeftPadding <= cgridSize / 2) {
-                    gc = floor(g / cgridSize) * cgridSize;
-                } else {
-                    gc = floor(g / cgridSize) * cgridSize + cgridSize;
-                }
-                let bLeftPadding = b % cgridSize;
-                if (bLeftPadding <= cgridSize / 2) {
-                    bc = floor(b / cgridSize) * cgridSize;
-                } else {
-                    bc = floor(b / cgridSize) * cgridSize + cgridSize;
-                }
-                return new RGBColor(rc, gc, bc);
-            }
+            // //寻找最相近的颜色点
+            // function findClosestColor(r, g, b) {
+            //     let cgridCount = 52;
+            //     let cgridSize = 255 / cgridCount;
+            //     let rc;
+            //     let gc;
+            //     let bc;
+            //     let rLeftPadding = r % cgridSize;
+            //     if (rLeftPadding <= cgridSize / 2) {
+            //         rc = floor(r / cgridSize) * cgridSize;
+            //     } else {
+            //         rc = floor(r / cgridSize) * cgridSize + cgridSize;
+            //     }
+            //     let gLeftPadding = g % cgridSize;
+            //     if (gLeftPadding <= cgridSize / 2) {
+            //         gc = floor(g / cgridSize) * cgridSize;
+            //     } else {
+            //         gc = floor(g / cgridSize) * cgridSize + cgridSize;
+            //     }
+            //     let bLeftPadding = b % cgridSize;
+            //     if (bLeftPadding <= cgridSize / 2) {
+            //         bc = floor(b / cgridSize) * cgridSize;
+            //     } else {
+            //         bc = floor(b / cgridSize) * cgridSize + cgridSize;
+            //     }
+            //     return new RGBColor(rc, gc, bc);
+            // }
 
             start(displayArea, () => {
                 background(rgb(0, 0, 0));
-                openMedia(width / 5, height / 5);
+                openMedia(width / 3, height / 3);
                 noStroke();
 
                 tracker = new tracking.ObjectTracker("face");
@@ -130,7 +130,7 @@
                     for (let x = 0; x < width; x += gridSize) {
                         for (let y = 0; y < height; y += gridSize) {
                             let colorData = getPointData(width - x, y);
-                            let blockData = new Block1(x, y, findClosestColor(colorData.r, colorData.g, colorData.b));
+                            let blockData = new Block1(x, y, rgb(colorData.r, colorData.g, colorData.b));
                             cPointArr.push(blockData);
                         }
                     }
@@ -141,7 +141,7 @@
                         for (let y = 0; y < height; y += gridSize) {
                             i++;
                             let colorData = getPointData(width - x, y);
-                            cPointArr[i].color = findClosestColor(colorData.r, colorData.g, colorData.b);
+                            cPointArr[i].color = rgb(colorData.r, colorData.g, colorData.b);
                         }
                     }
                 }
@@ -162,7 +162,8 @@
                     if (isBacking) {
                         bk.applyBackForce();
                     } else {
-                        bk.applyForce(new Vector(random(-0.2, 0.2), random(-0.2, 0.2)));
+                        let bspeed=1;
+                        bk.applyForce(new Vector(random(-bspeed, bspeed), random(-bspeed, bspeed)));
                     }
                     bk.checkEdges();
                     bk.update();
@@ -171,10 +172,16 @@
                         fill(_.color);
                         rectCenter(
                             _.position.x, _.position.y,
-                            map(_.velocity.mag(), 0, _.maxSpeed, gridSize, gridSize * 1.5),
-                            map(_.velocity.mag(), 0, _.maxSpeed, gridSize, gridSize * 1.5),
+                            map(_.velocity.mag(), 0, _.maxSpeed, gridSize, gridSize * 1.5)+random(0,1),
+                            map(_.velocity.mag(), 0, _.maxSpeed, gridSize, gridSize * 1.5)+random(0,1),
                         );
                     });
+                }
+                if(frameCount<100){
+                    fill(rgb(250,250,250));
+                    noStroke();
+                    textSize(30);
+                    text("Loading......",width/2-100,height/2);
                 }
             })
         }
