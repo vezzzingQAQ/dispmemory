@@ -53,8 +53,8 @@
                     super(1, new Vector(x, y), new Vector(0, 0));
                     this.oposition = new Vector(x, y);
                     this.color = color;
-                    this.maxForce = 0.08;
-                    this.maxSpeed = 8;
+                    this.maxForce = 0.1;
+                    this.maxSpeed = 12;
                     this.t = 0;
                 }
                 seek(target) {
@@ -162,7 +162,7 @@
                     if (isBacking) {
                         bk.applyBackForce();
                     } else {
-                        let bspeed=1;
+                        let bspeed=0.5;
                         bk.applyForce(new Vector(random(-bspeed, bspeed), random(-bspeed, bspeed)));
                     }
                     bk.checkEdges();
